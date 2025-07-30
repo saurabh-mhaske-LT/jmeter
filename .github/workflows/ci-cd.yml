@@ -64,7 +64,7 @@ jobs:
         tag_name: ${{ github.ref }}
         release_name: JMeter ${{ github.ref_name }}
         body: |
-          JMeter Binary Distribution
+          JMeter Binary Distribution with Enhanced Error Tracking
           
           ## Download
           Binary distribution is available as an artifact.
