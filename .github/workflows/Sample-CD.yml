@@ -2,71 +2,68 @@ name: JMeter Build and Binary Creation
 
 on:
   push:
-    branches: [ Test ]
+    branches: [ master, Test ]
   pull_request:
-    branches: [ Test ]
+    branches: [ master, Test ]
   release:
     types: [ published ]
 
 env:
   JAVA_VERSION: '11'
-  GRADLE_VERSION: '7.6.4'
 
 jobs:
   build-and-create-binary:
     name: Build and Create Binary
     runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up JDK ${{ env.JAVA_VERSION }}
-      uses: actions/setup-java@v4
-      with:
-        java-version: ${{ env.JAVA_VERSION }}
-        distribution: 'temurin'
-        
-    - name: Setup Gradle
-      # This action provisions the 'gradle' command on the runner's PATH
-      uses: gradle/actions/setup-gradle@v3
-      with:
-        gradle-version: ${{ env.GRADLE_VERSION }}
 
-    - name: Force Gradle Wrapper to use specified version
-      # We run 'gradle' directly here (not ./gradlew) to bypass the project's
-      # existing wrapper and force it to update to the correct version.
-      run: gradle wrapper --gradle-version ${{ env.GRADLE_VERSION }} --distribution-type all
-        
-    - name: Cache Gradle packages
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.gradle/caches
-          ~/.gradle/wrapper
-        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-        restore-keys: |
-          ${{ runner.os }}-gradle-
-          
-    - name: Build with Gradle (using the updated wrapper)
-      # Now that the wrapper is fixed, ./gradlew will use the correct version.
-      run: ./gradlew build -x test -x checkstyleTest -x checkstyleMain -x batchTests
-      
-    - name: Create Binary Distribution using distZip
-      run: ./gradlew distZip
-      
-    - name: Upload Build Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: jmeter-binary-dist
-        path: build/distributions/*.zip
-        retention-days: 30
-        
-    - name: Create Release and Upload Binary
-      if: startsWith(github.ref, 'refs/tags/')
-      uses: softprops/action-gh-release@v2
-      with:
-        body: |
-          JMeter binary with custom modifications.
-          Download the attached .zip file.
-        files: build/distributions/*.zip
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Grant execute permissions for gradlew
+        run: chmod +x ./gradlew
+
+      - name: Build with Gradle (Java 11)
+        run: ./gradlew build -x test -x checkstyleTest -x checkstyleMain -x batchTests
+
+      - name: Create Binary Distribution
+        run: ./gradlew distZip
+
+      - name: Upload Binary Distribution
+        uses: actions/upload-artifact@v4
+        with:
+          name: jmeter-binary
+          path: src/dist/build/distributions/
+          retention-days: 90
+
+      - name: Create Release on Tag
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: JMeter ${{ github.ref_name }}
+          body: |
+            JMeter Binary Distribution with Enhanced Error Tracking
+            
+            ## Download
+            Binary distribution is available as an artifact.
+          draft: false
+          prerelease: false
