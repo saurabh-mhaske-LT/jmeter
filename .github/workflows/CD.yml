@@ -1,0 +1,129 @@
+name: Continuous Deployment - JMeter Binary Build
+
+on:
+  push:
+    branches: [ main, master, develop ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+env:
+  GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g
+
+jobs:
+  build:
+    name: Build JMeter Binary Distribution
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        java: ['11']
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Full history for git properties
+    
+    - name: Set up JDK ${{ matrix.java }}
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ matrix.java }}
+        distribution: 'temurin'
+        cache: gradle
+    
+    - name: Setup Gradle
+      uses: gradle/gradle-build-action@v2
+      with:
+        gradle-version: wrapper
+    
+    - name: Cache Gradle packages
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
+    
+    - name: Build JMeter Binary Distribution
+      run: |
+        ./gradlew distZip -PchecksumIgnore --no-daemon --stacktrace
+      env:
+        GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g
+    
+    - name: List build artifacts
+      run: |
+        echo "=== Build Artifacts ==="
+        find . -name "*.zip" -path "*/distributions/*" -exec ls -la {} \;
+        find . -name "*.tgz" -path "*/distributions/*" -exec ls -la {} \;
+        echo "=== Checksum Files ==="
+        find . -name "*.sha512" -path "*/checksums/*" -exec ls -la {} \;
+    
+    - name: Upload JMeter Binary Distribution
+      uses: actions/upload-artifact@v4
+      with:
+        name: jmeter-binary-${{ matrix.java }}-${{ github.run_number }}
+        path: |
+          src/dist/build/distributions/*.zip
+          src/dist/build/distributions/*.tgz
+          src/dist/build/checksums/**/*.sha512
+        retention-days: 30
+    
+    - name: Build JMeter Source Distribution
+      run: |
+        ./gradlew distZipSource -PchecksumIgnore --no-daemon --stacktrace
+      env:
+        GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g
+    
+    - name: Upload JMeter Source Distribution
+      uses: actions/upload-artifact@v4
+      with:
+        name: jmeter-source-${{ matrix.java }}-${{ github.run_number }}
+        path: |
+          src/dist/build/distributions/*_src.zip
+          src/dist/build/distributions/*_src.tgz
+        retention-days: 30
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up JDK 11
+      uses: actions/setup-java@v4
+      with:
+        java-version: '11'
+        distribution: 'temurin'
+        cache: gradle
+    
+    - name: Setup Gradle
+      uses: gradle/gradle-build-action@v2
+      with:
+        gradle-version: wrapper
+    
+    - name: Build Release Distributions
+      run: |
+        ./gradlew distZip distZipSource -PchecksumIgnore --no-daemon --stacktrace
+      env:
+        GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          src/dist/build/distributions/*.zip
+          src/dist/build/distributions/*.tgz
+          src/dist/build/checksums/**/*.sha512
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
