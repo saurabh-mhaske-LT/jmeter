@@ -41,7 +41,7 @@ jobs:
         key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
         restore-keys: |
           ${{ runner.os }}-gradle-
-          
+
     - name: Build with Gradle (Java 11)
       run: ./gradlew build -x test -x checkstyleTest -x checkstyleMain -x batchTests -PtargetJavaVersion=11 -PjdkBuildVersion=11
       
