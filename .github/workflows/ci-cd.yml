@@ -1,0 +1,72 @@
+name: JMeter Build and Binary Creation
+
+on:
+  push:
+    branches: [ master, Test ]
+  pull_request:
+    branches: [ master, Test ]
+  release:
+    types: [ published ]
+
+env:
+  JAVA_VERSION: '17'
+  GRADLE_VERSION: '8.14.3'
+
+jobs:
+  build-and-create-binary:
+    name: Build and Create Binary
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up JDK ${{ env.JAVA_VERSION }}
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ env.JAVA_VERSION }}
+        distribution: 'temurin'
+        
+    - name: Setup Gradle
+      uses: gradle/gradle-build-action@v2
+      with:
+        gradle-version: ${{ env.GRADLE_VERSION }}
+        
+    - name: Cache Gradle packages
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
+          
+    - name: Build with Gradle
+      run: ./gradlew build -x test -x checkstyleTest -x checkstyleMain -x batchTests
+      
+    - name: Create Binary Distribution
+      run: ./gradlew distZip
+      
+    - name: Upload Binary Distribution
+      uses: actions/upload-artifact@v4
+      with:
+        name: jmeter-binary
+        path: src/dist/build/distributions/
+        retention-days: 90
+        
+    - name: Create Release on Tag
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: JMeter ${{ github.ref_name }}
+        body: |
+          JMeter Binary Distribution with Enhanced Error Tracking
+          
+          ## Download
+          Binary distribution is available as an artifact.
+        draft: false
+        prerelease: false 
