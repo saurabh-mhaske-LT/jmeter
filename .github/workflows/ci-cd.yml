@@ -9,8 +9,8 @@ on:
     types: [ published ]
 
 env:
-  JAVA_VERSION: '17'
-  GRADLE_VERSION: '8.14.3'
+  JAVA_VERSION: '11'
+  GRADLE_VERSION: '7.6.4'
 
 jobs:
   build-and-create-binary:
@@ -42,29 +42,29 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-gradle-
           
-    - name: Build with Gradle
-      run: ./gradlew build -x test -x checkstyleTest -x checkstyleMain -x batchTests
+    - name: Build with Gradle (Java 11)
+      run: ./gradlew build -x test -x checkstyleTest -x checkstyleMain -x batchTests -PtargetJavaVersion=11 -PjdkBuildVersion=11
       
-    - name: Create Binary Distribution
-      run: ./gradlew distZip
+    - name: Create Binary Distribution (Java 11)
+      run: ./gradlew distZip -PtargetJavaVersion=11 -PjdkBuildVersion=11
       
-    - name: Upload Binary Distribution
+    - name: Upload Binary Distribution (Java 11)
       uses: actions/upload-artifact@v4
       with:
-        name: jmeter-binary
+        name: jmeter-binary-java11
         path: src/dist/build/distributions/
         retention-days: 90
         
-    - name: Create Release on Tag
+    - name: Create Release on Tag (Java 11)
       if: startsWith(github.ref, 'refs/tags/')
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ github.ref }}
-        release_name: JMeter ${{ github.ref_name }}
+        tag_name: ${{ github.ref }}-java11
+        release_name: JMeter ${{ github.ref_name }} (Java 11)
         body: |
-          JMeter Binary Distribution with Enhanced Error Tracking
+          JMeter Binary Distribution with Enhanced Error Tracking (Java 11)
           
           ## Download
           Binary distribution is available as an artifact.
