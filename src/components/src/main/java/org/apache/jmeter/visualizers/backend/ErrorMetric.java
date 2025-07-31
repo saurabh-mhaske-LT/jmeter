@@ -20,6 +20,8 @@ package org.apache.jmeter.visualizers.backend;
 import java.util.Locale;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.ObjectUtils;
+import org.apache.jmeter.assertions.AssertionResult;
 import org.apache.jmeter.report.utils.MetricUtils;
 import org.apache.jmeter.samplers.SampleResult;
 
