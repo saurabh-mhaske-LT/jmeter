@@ -9,7 +9,7 @@ on:
     types: [ published ]
 
 env:
-  JAVA_VERSION: '21'
+  JAVA_VERSION: '17'
   GRADLE_VERSION: '8.14.3'
 
 jobs:
