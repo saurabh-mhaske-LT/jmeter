@@ -2,9 +2,9 @@ name: JMeter Build and Binary Creation
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, Test ]
   pull_request:
-    branches: [ master ]
+    branches: [ master, Test ]
   release:
     types: [ published ]
 
