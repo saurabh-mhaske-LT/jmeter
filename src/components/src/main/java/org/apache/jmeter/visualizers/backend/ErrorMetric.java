@@ -45,15 +45,8 @@ public class ErrorMetric {
     }
 
     public ErrorMetric(SampleResult result) {
-        if (MetricUtils.isSuccessCode(responseCode) ||
-                (StringUtils.isEmpty(responseCode) &&
-                        !StringUtils.isEmpty(result.getFirstAssertionFailureMessage().getLeft()))) {
-            responseCode = result.getFirstAssertionFailureMessage().getLeft();
-            responseMessage = result.getFirstAssertionFailureMessage().getRight();
-        } else {
-            responseCode = result.getResponseCode();
-            responseMessage = result.getResponseMessage();
-        }
+        responseCode = result.getResponseCode();
+        responseMessage = result.getResponseMessage();
     }
 
     public ErrorMetric(AssertionResult assertionResult) {
