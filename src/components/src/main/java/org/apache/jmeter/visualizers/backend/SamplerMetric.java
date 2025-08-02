@@ -127,23 +127,19 @@ public class SamplerMetric {
             failures+=result.getErrorCount();
             // Check if there are assertion failures
             AssertionResult[] assertionResults = result.getAssertionResults();
-            boolean hasAssertionFailures = false;
             // Process all failed assertions
             if (ObjectUtils.isNotEmpty(assertionResults)) {
                 for (AssertionResult assertionResult : assertionResults) {
                     if (assertionResult.isFailure() || assertionResult.isError()) {
-                        hasAssertionFailures = true;
                         // Create ErrorMetric for each failed assertion
                         ErrorMetric error = new ErrorMetric(assertionResult);
                         errors.put(error, errors.getOrDefault(error, 0) + 1);
                     }
                 }
             }
-            // If no assertion failures, create ErrorMetric based on response code/message
-            if (!hasAssertionFailures) {
-                ErrorMetric error = new ErrorMetric(result);
-                errors.put(error, errors.getOrDefault(error, 0) + result.getErrorCount());
-            }
+            // Create ErrorMetric based on response code/message
+            ErrorMetric error = new ErrorMetric(result);
+            errors.put(error, errors.getOrDefault(error, 0) + result.getErrorCount());
         }
         long time = result.getTime();
         allResponsesStats.addValue((double) time);
